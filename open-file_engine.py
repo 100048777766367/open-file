@@ -1,20 +1,26 @@
 import os, json, hashlib
-SHARED_DIR = "/tmp/bodhi_workspace"
-TARGET_REPO = os.environ.get("TARGET_REPO", "retina")
 
-print(f"📄 [OPEN-FILE] Bắt đầu băm SHA-256 tệp tin cho {TARGET_REPO}...")
-file_data = {"files": []}
+WORKSPACE = "/tmp/bodhi_dissector"
+os.chdir(WORKSPACE)
+
+print("📄 [OPEN-FILE REAL ENGINE] Đang đo dung lượng và băm SHA-256 từng file...")
+file_result = {"files": []}
 
 try:
-    with open(f"{SHARED_DIR}/tree_data.json", "r") as f: paths = json.load(f)["all_paths"]
+    with open("tree_out.json", "r") as f: paths = json.load(f)["paths"]
+    repos = [d for d in os.listdir(".") if os.path.isdir(d) and d not in ["storage"]]
+    target_repo = repos[0] if repos else "retina"
+
     for p in paths:
-        full_p = os.path.join(SHARED_DIR, TARGET_REPO, p)
+        full_p = os.path.join(target_repo, p)
         if os.path.isfile(full_p) and not p.endswith((".pyc", ".ipynb")):
             sz = os.path.getsize(full_p)
             try:
                 with open(full_p, "rb") as fr: fh = hashlib.sha256(fr.read()).hexdigest()[:12]
-            except: fh = "error"
-            file_data["files"].append({"path": p, "size": sz, "hash": fh})
-    with open(f"{SHARED_DIR}/file_data.json", "w") as f: json.dump(file_data, f)
-    print("✅ [OPEN-FILE] Đã quét xong dung lượng và mã băm.")
-except Exception as e: print(f"⚠️ Lỗi: {e}")
+            except: fh = "error_hash"
+            file_result["files"].append({"path": p, "size_bytes": sz, "hash": fh})
+
+    with open("file_out.json", "w") as f: json.dump(file_result, f)
+    print(f"✅ [OPEN-FILE] Đã băm xong {len(file_result['files'])} tệp vào `file_out.json`.")
+except Exception as e:
+    print(f"🔴 Lỗi ở open-file: {e}")
